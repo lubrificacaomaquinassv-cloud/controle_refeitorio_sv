@@ -30,6 +30,11 @@ h1{font-family:'Barlow Condensed',sans-serif;letter-spacing:1px;}
 .sec{font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:700;
  letter-spacing:2px;text-transform:uppercase;color:#8aab80;
  border-left:4px solid #4a9e3f;padding-left:10px;margin:8px 0 12px;}
+.cat-badge{display:inline-block;background:#0d180c;border:1px solid #4a9e3f;color:#6fcf60;
+ font-family:'Barlow Condensed',sans-serif;font-weight:700;letter-spacing:1px;
+ padding:4px 12px;border-radius:8px;font-size:13px;}
+.cat-badge.outros{border-color:#669bbc;color:#669bbc;}
+.ctx-box{background:#0d180c;border:1px solid #1e2e1c;border-radius:12px;padding:14px 16px;margin-bottom:12px;}
 .logo-box{background:#ffffff;border-radius:10px;padding:8px 12px;display:inline-block;}
 
 .stTextInput input,.stNumberInput input,.stTextArea textarea,
@@ -107,7 +112,7 @@ def get_supabase() -> Client:
 
 
 def render_header():
-    col_logo, col_titulo = st.columns([1, 5])
+    col_logo, col_titulo, col_acao = st.columns([1, 5, 1])
     with col_logo:
         st.markdown(
             f'<div class="logo-box"><img src="{LOGO_URL}" width="100"></div>',
@@ -115,7 +120,22 @@ def render_header():
         )
     with col_titulo:
         st.title("Controle do Refeitório")
-        st.caption("SIGCF — Registro diário de consumo no refeitório (café e refeições)")
+        st.caption("SIGCF — Registro diário de consumo no refeitório · desconto em folha → RH")
+    with col_acao:
+        if st.button("🔄 Atualizar"):
+            st.cache_data.clear()
+            st.rerun()
+
+
+def badge_motivo(motivo: str):
+    cls = "" if motivo == "Particular" else " outros"
+    label = "DESCONTO FOLHA" if motivo == "Particular" else motivo.upper()
+    st.markdown(
+        f'<p style="margin:0 0 6px;color:#8aab80;font-size:12px;text-transform:uppercase;'
+        f'letter-spacing:1px;">Motivo</p>'
+        f'<span class="cat-badge{cls}">{label}</span>',
+        unsafe_allow_html=True,
+    )
 
 
 def insert_lancamento(
@@ -233,6 +253,7 @@ def format_registros(rows: list) -> pd.DataFrame:
 
 def main():
     render_header()
+    st.divider()
 
     try:
         sb = get_supabase()
@@ -245,18 +266,28 @@ def main():
         st.stop()
 
     tab_lanc, tab_consulta, tab_rh = st.tabs([
-        "Novo lançamento", "Consultar registros", "Resumo RH — Desconto Folha",
+        "📝 Novo lançamento",
+        "📋 Consultar registros",
+        "📊 Resumo RH — Desconto Folha",
     ])
 
     with tab_lanc:
         st.markdown('<div class="sec">Registrar consumo</div>', unsafe_allow_html=True)
+        st.markdown('<div class="ctx-box">', unsafe_allow_html=True)
+
+        cm1, cm2 = st.columns([3, 1])
+        with cm1:
+            motivo = st.selectbox("📌 Motivo", options=MOTIVOS, index=0, key="motivo_lanc")
+        with cm2:
+            badge_motivo(motivo)
+
         with st.form("form_refeitorio", clear_on_submit=True):
             col_data, col_qtd = st.columns([2, 1])
             with col_data:
-                data_lanc = st.date_input("Data", value=date.today(), format="DD/MM/YYYY")
+                data_lanc = st.date_input("📅 Data", value=date.today(), format="DD/MM/YYYY")
             with col_qtd:
                 qtd = st.number_input(
-                    "QTD",
+                    "🔢 QTD",
                     min_value=1,
                     max_value=999,
                     value=1,
@@ -264,22 +295,18 @@ def main():
                     help="Quantidade consumida",
                 )
 
-            solicitante = st.text_input("Solicitante", placeholder="Nome do solicitante", max_chars=120)
-
-            col_setor, col_motivo = st.columns(2)
-            with col_setor:
-                setor = st.text_input("Setor", placeholder="Ex.: Máquinas, Pecuária, Florestal", max_chars=80)
-            with col_motivo:
-                motivo = st.selectbox("Motivo", options=MOTIVOS, index=0)
+            solicitante = st.text_input("👤 Solicitante", placeholder="Nome do solicitante", max_chars=120)
+            setor = st.text_input("🏢 Setor", placeholder="Ex.: Máquinas, Pecuária, Florestal", max_chars=80)
 
             st.markdown('<div class="sec">Tipo de refeição</div>', unsafe_allow_html=True)
             c1, c2 = st.columns(2)
             with c1:
-                cafe = st.checkbox("Café")
+                cafe = st.checkbox("☕ Café")
             with c2:
-                refeicao = st.checkbox("Refeição")
+                refeicao = st.checkbox("🍽️ Refeição")
 
-            submitted = st.form_submit_button("Registrar lançamento", type="primary", use_container_width=True)
+            submitted = st.form_submit_button("✅ Registrar lançamento", type="primary", use_container_width=True)
+        st.markdown('</div>', unsafe_allow_html=True)
 
         if submitted:
             if not solicitante.strip():
@@ -386,7 +413,7 @@ def main():
                         f"{data_ini.strftime('%Y%m%d')}_{data_fim.strftime('%Y%m%d')}.xlsx"
                     )
                     st.download_button(
-                        "Exportar Excel para RH",
+                        "⬇️ Exportar Excel para RH",
                         data=gerar_excel(df_rh),
                         file_name=nome_arquivo,
                         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
