@@ -1,8 +1,11 @@
 import streamlit as st
 import pandas as pd
 from datetime import date, datetime
+from io import BytesIO
 from supabase import create_client, Client
 from sigcf_auth import exigir_acesso
+
+MOTIVOS = ["Particular", "Prestador Serviço", "Visita", "Outros"]
 
 st.set_page_config(
     page_title="Controle do Refeitório - SIGCF",
@@ -141,6 +144,73 @@ def load_registros(sb: Client, data_filtro: date | None):
     return query.limit(500).execute().data
 
 
+def ciclo_fechamento(ref: date | None = None) -> tuple[date, date]:
+    """Ciclo mensal: dia 21 do mês anterior até dia 20 do mês de referência."""
+    ref = ref or date.today()
+    fim = date(ref.year, ref.month, 20)
+    if ref.month == 1:
+        inicio = date(ref.year - 1, 12, 21)
+    else:
+        inicio = date(ref.year, ref.month - 1, 21)
+    return inicio, fim
+
+
+def load_registros_periodo(sb: Client, inicio: date, fim: date) -> list:
+    return (
+        sb.table("refeitorio")
+        .select("*")
+        .gte("data", inicio.isoformat())
+        .lte("data", fim.isoformat())
+        .order("data")
+        .limit(5000)
+        .execute()
+        .data
+        or []
+    )
+
+
+def eh_particular(motivo: str) -> bool:
+    return str(motivo or "").strip().lower() == "particular"
+
+
+def resumo_rh_particular(rows: list) -> pd.DataFrame:
+    agg: dict[str, dict] = {}
+    for r in rows:
+        if not eh_particular(r.get("motivo", "")):
+            continue
+        nome = str(r.get("solicitante", "")).strip()
+        if not nome:
+            continue
+        if nome not in agg:
+            agg[nome] = {"Setor": str(r.get("setor") or "").strip(), "Café": 0, "Refeição": 0}
+        tipo = str(r.get("tipo_refeicao", "")).strip()
+        qtd = int(r.get("qtd") or 0)
+        if tipo == "Café":
+            agg[nome]["Café"] += qtd
+        elif tipo == "Refeição":
+            agg[nome]["Refeição"] += qtd
+
+    if not agg:
+        return pd.DataFrame(columns=["Nome", "Setor", "Café", "Refeição", "Total"])
+
+    return pd.DataFrame([
+        {
+            "Nome": nome,
+            "Setor": dados["Setor"],
+            "Café": dados["Café"],
+            "Refeição": dados["Refeição"],
+            "Total": dados["Café"] + dados["Refeição"],
+        }
+        for nome, dados in sorted(agg.items(), key=lambda x: x[0].upper())
+    ])
+
+
+def gerar_excel(df: pd.DataFrame) -> bytes:
+    buf = BytesIO()
+    df.to_excel(buf, index=False, sheet_name="Desconto Folha")
+    return buf.getvalue()
+
+
 def format_registros(rows: list) -> pd.DataFrame:
     formatted = []
     for r in rows:
@@ -174,7 +244,9 @@ def main():
         st.caption(str(e))
         st.stop()
 
-    tab_lanc, tab_consulta = st.tabs(["Novo lançamento", "Consultar registros"])
+    tab_lanc, tab_consulta, tab_rh = st.tabs([
+        "Novo lançamento", "Consultar registros", "Resumo RH — Desconto Folha",
+    ])
 
     with tab_lanc:
         st.markdown('<div class="sec">Registrar consumo</div>', unsafe_allow_html=True)
@@ -198,7 +270,7 @@ def main():
             with col_setor:
                 setor = st.text_input("Setor", placeholder="Ex.: Máquinas, Pecuária, Florestal", max_chars=80)
             with col_motivo:
-                motivo = st.text_input("Motivo", placeholder="Ex.: Particular, Prestador Serviço", max_chars=120)
+                motivo = st.selectbox("Motivo", options=MOTIVOS, index=0)
 
             st.markdown('<div class="sec">Tipo de refeição</div>', unsafe_allow_html=True)
             c1, c2 = st.columns(2)
@@ -261,6 +333,71 @@ def main():
                 st.info("Nenhum registro encontrado para o filtro selecionado.")
         except Exception as e:
             st.error(f"Erro ao carregar registros: {e}")
+
+    with tab_rh:
+        inicio_padrao, fim_padrao = ciclo_fechamento()
+        st.markdown('<div class="sec">Resumo para desconto em folha (RH)</div>', unsafe_allow_html=True)
+        st.caption(
+            f"Ciclo de fechamento: **{inicio_padrao.strftime('%d/%m/%Y')}** a "
+            f"**{fim_padrao.strftime('%d/%m/%Y')}** — somente motivo **Particular**. "
+            f"Gerar todo dia **21** e enviar ao RH."
+        )
+
+        c1, c2 = st.columns(2)
+        with c1:
+            data_ini = st.date_input(
+                "Período — início",
+                value=inicio_padrao,
+                format="DD/MM/YYYY",
+                key="rh_ini",
+            )
+        with c2:
+            data_fim = st.date_input(
+                "Período — fim",
+                value=fim_padrao,
+                format="DD/MM/YYYY",
+                key="rh_fim",
+            )
+
+        if data_ini > data_fim:
+            st.error("A data inicial não pode ser maior que a data final.")
+        else:
+            try:
+                rows_periodo = load_registros_periodo(sb, data_ini, data_fim)
+                df_rh = resumo_rh_particular(rows_periodo)
+
+                total_cafe = int(df_rh["Café"].sum()) if not df_rh.empty else 0
+                total_refeicao = int(df_rh["Refeição"].sum()) if not df_rh.empty else 0
+                m1, m2, m3, m4 = st.columns(4)
+                m1.metric("Colaboradores", len(df_rh))
+                m2.metric("Total Cafés", total_cafe)
+                m3.metric("Total Refeições", total_refeicao)
+                m4.metric("Total Geral", total_cafe + total_refeicao)
+
+                if df_rh.empty:
+                    st.info(
+                        "Nenhum lançamento **Particular** no período selecionado. "
+                        "Confira se o motivo foi registrado como Particular."
+                    )
+                else:
+                    dark_table(df_rh, height=400)
+                    nome_arquivo = (
+                        f"refeitorio_desconto_folha_"
+                        f"{data_ini.strftime('%Y%m%d')}_{data_fim.strftime('%Y%m%d')}.xlsx"
+                    )
+                    st.download_button(
+                        "Exportar Excel para RH",
+                        data=gerar_excel(df_rh),
+                        file_name=nome_arquivo,
+                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                        use_container_width=True,
+                    )
+                    st.caption(
+                        f"Arquivo pronto para enviar ao RH — período "
+                        f"{data_ini.strftime('%d/%m/%Y')} a {data_fim.strftime('%d/%m/%Y')}."
+                    )
+            except Exception as e:
+                st.error(f"Erro ao gerar resumo RH: {e}")
 
     st.divider()
     st.caption("SIGCF | Controle do Refeitório | Núcleo de Controladoria SV")
