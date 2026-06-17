@@ -1,0 +1,17 @@
+CONTROLE DO REFEITÓRIO — SIGCF
+================================
+
+Repositório GitHub: lubrificacaomaquinassv-cloud/controle_refeitorio_sv
+App online: https://controlerefeitoriosv-th2xfqra7fgc9ygar4horq.streamlit.app/
+
+PUBLICAR ATUALIZAÇÃO
+--------------------
+1. Copie App.py e sigcf_auth.py desta pasta para o GitHub
+2. Atualize requirements.txt (inclui pandas)
+3. Streamlit Cloud → Main file: App.py
+4. Secrets: SUPABASE_URL, SUPABASE_KEY, APP_PIN
+
+RODAR LOCAL
+-----------
+pip install -r requirements.txt
+streamlit run App.py
