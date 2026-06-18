@@ -3,7 +3,7 @@ import pandas as pd
 from datetime import date, datetime
 from io import BytesIO
 from supabase import create_client, Client
-from sigcf_auth import exigir_acesso
+from sigcf_auth import exigir_acesso, logo_html, LOGO_FRAME_CSS
 
 MOTIVOS = ["Particular", "Prestador Serviço", "Visita", "Outros"]
 
@@ -13,8 +13,6 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="collapsed",
 )
-
-LOGO_URL = "https://i.postimg.cc/Y9X7ddnb/LOGO-BP.jpg"
 
 exigir_acesso("Controle do Refeitório")
 
@@ -35,7 +33,7 @@ h1{font-family:'Barlow Condensed',sans-serif;letter-spacing:1px;}
  padding:4px 12px;border-radius:8px;font-size:13px;}
 .cat-badge.outros{border-color:#669bbc;color:#669bbc;}
 .ctx-box{background:#0d180c;border:1px solid #1e2e1c;border-radius:12px;padding:14px 16px;margin-bottom:12px;}
-.logo-box{background:#ffffff;border-radius:10px;padding:8px 12px;display:inline-block;}
+""" + LOGO_FRAME_CSS + """
 
 .stTextInput input,.stNumberInput input,.stTextArea textarea,
 [data-testid="stDateInput"] input{
@@ -112,12 +110,9 @@ def get_supabase() -> Client:
 
 
 def render_header():
-    col_logo, col_titulo, col_acao = st.columns([1, 5, 1])
+    col_logo, col_titulo, col_acao = st.columns([1.1, 5, 1])
     with col_logo:
-        st.markdown(
-            f'<div class="logo-box"><img src="{LOGO_URL}" width="100"></div>',
-            unsafe_allow_html=True,
-        )
+        st.markdown(logo_html(118), unsafe_allow_html=True)
     with col_titulo:
         st.title("Controle do Refeitório")
         st.caption("SIGCF — Registro diário de consumo no refeitório · desconto em folha → RH")
