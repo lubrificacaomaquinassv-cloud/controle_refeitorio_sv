@@ -3,9 +3,6 @@ import pandas as pd
 from datetime import date, datetime
 from io import BytesIO
 from supabase import create_client, Client
-from sigcf_auth import exigir_acesso, logo_html, LOGO_FRAME_CSS
-
-MOTIVOS = ["Particular", "Prestador Serviço", "Visita", "Outros"]
 
 st.set_page_config(
     page_title="Controle do Refeitório - SIGCF",
@@ -13,6 +10,10 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="collapsed",
 )
+
+from sigcf_auth import exigir_acesso, logo_html
+
+MOTIVOS = ["Particular", "Prestador Serviço", "Visita", "Outros"]
 
 exigir_acesso("Controle do Refeitório")
 
@@ -33,7 +34,9 @@ h1{font-family:'Barlow Condensed',sans-serif;letter-spacing:1px;}
  padding:4px 12px;border-radius:8px;font-size:13px;}
 .cat-badge.outros{border-color:#669bbc;color:#669bbc;}
 .ctx-box{background:#0d180c;border:1px solid #1e2e1c;border-radius:12px;padding:14px 16px;margin-bottom:12px;}
-""" + LOGO_FRAME_CSS + """
+.logo-frame{background:linear-gradient(145deg,#0a1628,#0d2040);border:2px solid #c9a227;
+ border-radius:12px;padding:5px;display:inline-block;box-shadow:0 4px 18px rgba(0,0,0,.45);}
+.logo-frame img{display:block;border-radius:8px;}
 
 .stTextInput input,.stNumberInput input,.stTextArea textarea,
 [data-testid="stDateInput"] input{
