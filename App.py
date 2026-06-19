@@ -5,7 +5,7 @@ from io import BytesIO
 from supabase import create_client, Client
 
 st.set_page_config(
-    page_title="Controle do Refeitório - SIGCF",
+    page_title="CONTROLE DIÁRIO REFEITÓRIO - SIGCF",
     page_icon="🍽️",
     layout="wide",
     initial_sidebar_state="collapsed",
@@ -15,7 +15,7 @@ from sigcf_auth import exigir_acesso, logo_html
 
 MOTIVOS = ["Particular", "Prestador Serviço", "Visita", "Deslocamento interno", "Outros"]
 
-exigir_acesso("Controle do Refeitório")
+exigir_acesso("CONTROLE DIÁRIO REFEITÓRIO")
 
 st.markdown("""
 <style>
@@ -118,7 +118,7 @@ def render_header():
         st.markdown(logo_html(118), unsafe_allow_html=True)
     with col_titulo:
         st.title("Controle do Refeitório")
-        st.caption("SIGCF — Registro diário de consumo no refeitório · desconto em folha → RH")
+        st.caption("SIGCF — REGISTRO DIÁRIO DE CONSUMO REFEITÓRIO · DESCONTO EM FOLHA → RH")
     with col_acao:
         if st.button("🔄 Atualizar"):
             st.cache_data.clear()
@@ -425,7 +425,7 @@ def main():
                 st.error(f"Erro ao gerar resumo RH: {e}")
 
     st.divider()
-    st.caption("SIGCF | Controle do Refeitório | Núcleo de Controladoria SV")
+    st.caption("SIGCF | CONTROLE DIÁRIO REFEITÓRIO | NÚCLEO DE CONTROLADORIA | GESTÃO E ANÁLISE DE DADOS")
 
 
 if __name__ == "__main__":
