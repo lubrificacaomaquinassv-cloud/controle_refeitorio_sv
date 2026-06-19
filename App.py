@@ -117,7 +117,7 @@ def render_header():
     with col_logo:
         st.markdown(logo_html(118), unsafe_allow_html=True)
     with col_titulo:
-        st.title("Controle do Refeitório")
+        st.title("CONTROLE DIÁRIO REFEITÓRIO")
         st.caption("SIGCF — REGISTRO DIÁRIO DE CONSUMO REFEITÓRIO · DESCONTO EM FOLHA → RH")
     with col_acao:
         if st.button("🔄 Atualizar"):
@@ -425,7 +425,7 @@ def main():
                 st.error(f"Erro ao gerar resumo RH: {e}")
 
     st.divider()
-    st.caption("SIGCF | CONTROLE DIÁRIO REFEITÓRIO | NÚCLEO DE CONTROLADORIA | GESTÃO E ANÁLISE DE DADOS")
+    st.caption("SIGCF | NÚCLEO DE CONTROLADORIA | GESTÃO E ANÁLISE DE DADOS")
 
 
 if __name__ == "__main__":
