@@ -13,7 +13,7 @@ st.set_page_config(
 
 from sigcf_auth import exigir_acesso, logo_html
 
-MOTIVOS = ["Particular", "Prestador Serviço", "Visita", "Deslocamento interno", "Outros"]
+MOTIVOS = ["Particular", "Prestador de Serviço", "Visita", "Deslocamento interno", "Outros", "Pojeto Social"]
 
 exigir_acesso("CONTROLE DIÁRIO REFEITÓRIO")
 
